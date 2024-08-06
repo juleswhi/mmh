@@ -12,11 +12,11 @@ class handDetector():
         self.hands = self.mpHands.Hands(self.mode, self.maxHands, 1, self.detectionCon, self.trackCon)
         self.mpDraw = mp.solutions.drawing_utils
 
-    def findHands(self, img, draw=True):
+    def findHands(self, img, draw=False):
         imgRGB = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         self.results = self.hands.process(imgRGB)
 
-        print(self.results.multi_hand_landmarks)
+        # print(self.results.multi_hand_landmarks)
 
         if self.results.multi_hand_landmarks:
             for handLms in self.results.multi_hand_landmarks:
@@ -25,7 +25,7 @@ class handDetector():
 
         return img
 
-    def findPosition(self, img, handNo=0, draw=True):
+    def findPosition(self, img, handNo=0):
         lmList = []
         if self.results.multi_hand_landmarks:
             hand = self.results.multi_hand_landmarks[handNo]
@@ -33,31 +33,38 @@ class handDetector():
                 h, w, c = img.shape
                 cx, cy = int(lm.x * w), int(lm.y * h)
                 lmList.append([id, cx, cy])
-                if draw:
-                    cv2.circle(img, (cx, cy), 15, (255, 0, 255), cv2.FILLED)
+
+            indexX = 0
+            indexY = 0
+            indexMid = 0
+            handBottomX = 0
+            handBottomY = 0
+            pinkyX = 0
+            pinkyY = 0
+            fistWarning = "Fist!"
+            for lms in lmList:
+                if lms[0] == 7:
+                    indexX, indexY = lms[1], lms[2]
+                    # cv2.circle(handsFrame, (lms[1], lms[2]), 15, (255, 0, 255), cv2.FILLED)
+                elif lms[0] == 5:
+                    indexMid = lms[2]
+                # elif lms[0] == 11:
+                # middleY = lms[2]
+                # cv2.circle(handsFrame, (lms[1], lms[2]), 15, (255, 0, 255), cv2.FILLED)
+                # elif lms[0] == 15:
+                # ringY = lms[2]
+                # cv2.circle(handsFrame, (lms[1], lms[2]), 15, (255, 0, 255), cv2.FILLED)
+                elif lms[0] == 19:
+                    pinkyX, pinkyY = lms[1], lms[2]
+                    # cv2.circle(handsFrame, (lms[1], lms[2]), 15, (255, 0, 255), cv2.FILLED)
+                elif lms[0] == 0:
+                    handBottomX, handBottomY = lms[1], lms[2]
+            if (indexY < handBottomY) and (indexY > indexMid):
+                cv2.rectangle(img, (indexX, indexY), (pinkyX, handBottomY), (0, 0, 255), 2)
+                # cv2.putText(img, fistWarning, (pinkyX + 2, indexY - 2), (font), .7,
+                #           (0, 0, 255), 1, cv2.LINE_4)
+            print("Fist")
+
+
 
         return lmList
-
-
-def main():
-    pTime = 0
-    cTime = 0
-    cap = cv2.VideoCapture(0)
-    detector = handDetector()
-
-    while True:
-        success, img = cap.read()
-        img = detector.findHands(img)
-        lmList = detector.findPosition(img)
-
-        cTime = time.time()
-        fps = 1/(cTime-pTime)
-        pTime = cTime
-
-        cv2.putText(img, str(int(fps)), (10, 70), cv2.FONT_HERSHEY_COMPLEX, 3, (255,0,255), 3)
-        cv2.imshow("Image", img)
-        cv2.waitKey(1)
-
-if __name__ == "__main__":
-    main()
-
